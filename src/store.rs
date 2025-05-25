@@ -30,8 +30,8 @@ where
         let res = from_str::<T>(json_data.as_str());
 
         match res {
-            Ok(data) => Some(data),
-            Err(_) => None
+            Ok(data) => return Some(data),
+            Err(_) => return None
         };
     }
     
