@@ -9,7 +9,7 @@ pub fn save(filename: &str, path: &Path, data: String) -> Result<(), io::Error> 
     if !path.exists() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
-            format!("Path is not exists or {:?} is not file.", path),
+            format!("Path {:?} is not exists.", path),
         ));
     }
 
@@ -21,15 +21,15 @@ pub fn save(filename: &str, path: &Path, data: String) -> Result<(), io::Error> 
 }
 
 /// Loads serialized string data
-pub fn load(path: &Path) -> Result<String, io::Error> {
-    if !path.exists() {
+pub fn load(filepath: &Path) -> Result<String, io::Error> {
+    if !filepath.exists() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
-            format!("Path is not exists or {:?} is not file.", path),
+            format!("Path is not exists or {:?} is not file.", filepath),
         ));
     }
 
-    let mut file = File::open(&path)?;
+    let mut file = File::open(&filepath)?;
     let mut result = String::new();
     file.read_to_string(&mut result)?;
 
