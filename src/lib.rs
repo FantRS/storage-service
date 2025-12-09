@@ -6,6 +6,43 @@ use std::{
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+/// Synchronously saves data to a JSON file.
+///
+/// This function serializes the provided data to JSON format and writes it to the specified file.
+/// If the file already exists, it will be truncated.
+///
+/// # Arguments
+///
+/// * `path` - The file path where data will be saved
+/// * `data` - The data to serialize and save (must implement `Serialize`)
+///
+/// # Returns
+///
+/// * `Ok(())` - If the operation succeeds
+/// * `Err(io::Error)` - If file creation or writing fails, or if serialization fails
+///
+/// # Example
+///
+/// ```
+/// use storage_service::save;
+/// use serde::Serialize;
+/// use tempfile::NamedTempFile;
+///
+/// #[derive(Serialize)]
+/// struct User {
+///     name: String,
+///     age: u32,
+/// }
+///
+/// let temp_file = NamedTempFile::new().unwrap();
+/// let user = User {
+///     name: "Alice".to_string(),
+///     age: 30,
+/// };
+///
+/// let result = save(temp_file.path(), &user);
+/// assert!(result.is_ok());
+/// ```
 pub fn save<P, T>(path: P, data: T) -> Result<(), io::Error>
 where
     P: AsRef<Path>,
@@ -17,6 +54,47 @@ where
     file.write_all(json_data.as_bytes())
 }
 
+/// Asynchronously saves data to a JSON file.
+///
+/// This async function serializes the provided data to JSON format and writes it to the specified
+/// file using tokio's async file I/O. Serialization is performed on a blocking task to avoid
+/// blocking the async runtime.
+///
+/// # Arguments
+///
+/// * `path` - The file path where data will be saved
+/// * `data` - The data to serialize and save (must implement `Serialize`, `Send`, and `'static`)
+///
+/// # Returns
+///
+/// * `Ok(())` - If the operation succeeds
+/// * `Err(io::Error)` - If file creation, writing fails, or if serialization fails
+///
+/// # Example
+///
+/// ```
+/// use storage_service::save_async;
+/// use serde::Serialize;
+/// use tempfile::NamedTempFile;
+///
+/// #[derive(Serialize)]
+/// struct Config {
+///     host: String,
+///     port: u16,
+/// }
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let temp_file = NamedTempFile::new().unwrap();
+///     let config = Config {
+///         host: "localhost".to_string(),
+///         port: 8080,
+///     };
+///
+///     let result = save_async(temp_file.path(), config).await;
+///     assert!(result.is_ok());
+/// }
+/// ```
 pub async fn save_async<P, T>(path: P, data: T) -> Result<(), io::Error>
 where
     P: AsRef<Path>,
@@ -28,6 +106,42 @@ where
     file.write_all(json_data.as_bytes()).await
 }
 
+/// Synchronously loads data from a JSON file.
+///
+/// This function reads a JSON file and deserializes its contents into the specified type.
+///
+/// # Arguments
+///
+/// * `path` - The file path to read from
+///
+/// # Returns
+///
+/// * `Ok(T)` - The deserialized data if successful
+/// * `Err(io::Error)` - If file reading fails or if deserialization fails
+///
+/// # Example
+///
+/// ```
+/// use storage_service::{save, load};
+/// use serde::{Serialize, Deserialize};
+/// use tempfile::NamedTempFile;
+///
+/// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+/// struct Person {
+///     name: String,
+///     age: u32,
+/// }
+///
+/// let temp_file = NamedTempFile::new().unwrap();
+/// let original = Person {
+///     name: "Bob".to_string(),
+///     age: 25,
+/// };
+///
+/// save(temp_file.path(), &original).unwrap();
+/// let loaded: Person = load(temp_file.path()).unwrap();
+/// assert_eq!(loaded, original);
+/// ```
 pub fn load<'de, P, T>(path: P) -> Result<T, io::Error>
 where
     P: AsRef<Path>,
@@ -42,6 +156,47 @@ where
     Ok(data)
 }
 
+/// Asynchronously loads data from a JSON file.
+///
+/// This async function reads a JSON file using tokio's async file I/O and deserializes
+/// its contents into the specified type. Deserialization is performed on a blocking task
+/// to avoid blocking the async runtime.
+///
+/// # Arguments
+///
+/// * `path` - The file path to read from
+///
+/// # Returns
+///
+/// * `Ok(T)` - The deserialized data if successful
+/// * `Err(io::Error)` - If file reading fails or if deserialization fails
+///
+/// # Example
+///
+/// ```
+/// use storage_service::{save_async, load_async};
+/// use serde::{Serialize, Deserialize};
+/// use tempfile::NamedTempFile;
+///
+/// #[derive(Serialize, Deserialize, Clone, Debug)]
+/// struct Settings {
+///     theme: String,
+///     language: String,
+/// }
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let temp_file = NamedTempFile::new().unwrap();
+///     let original = Settings {
+///         theme: "dark".to_string(),
+///         language: "en".to_string(),
+///     };
+///
+///     save_async(temp_file.path(), original.clone()).await.unwrap();
+///     let loaded: Settings = load_async(temp_file.path()).await.unwrap();
+///     assert_eq!(loaded.theme, "dark");
+/// }
+/// ```
 pub async fn load_async<'de, P, T>(path: P) -> Result<T, io::Error>
 where
     P: AsRef<Path>,
